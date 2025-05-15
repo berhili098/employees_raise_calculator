@@ -49,13 +49,14 @@ class EmployeeRepository {
     return isar.writeAsync((idar) => isar.employeeCollections.delete(id));
   }
 
-  Future<int> addWorkToEmployee(int employeeId, WorkCollection work) async {
+  Future<int> addWorkToEmployee(int employeeId, String description, WorkStatus status) async {
     final isar = await db;
     EmployeeCollection? employeeCollection = isar.employeeCollections.get(employeeId);
 
     if (employeeCollection == null) {
       throw Exception('Employee not found');
     }
+    final work = WorkCollection(description: description, status: status);
 
     employeeCollection.workList.add(work);
 
@@ -71,15 +72,14 @@ class EmployeeRepository {
 
   // For demo purposes - add sample data
   Future<void> addSampleData() async {
-        final isar = await db;
+    final isar = await db;
 
-    
     // Create domain models
     final alice = EmployeeCollection(
       id: isar.employeeCollections.autoIncrement(),
       name: 'Alice',
       workList: [
-        WorkCollection( description: 'Task 1', status: WorkStatus.success),
+        WorkCollection(description: 'Task 1', status: WorkStatus.success),
         WorkCollection(description: 'Task 2', status: WorkStatus.failure),
         WorkCollection(description: 'Task 3', status: WorkStatus.success),
       ],
@@ -127,6 +127,21 @@ class EmployeeRepository {
     await saveEmployee(dina);
     await saveEmployee(oussama);
   }
+
+  Future<int> createEmployee(String name) async {
+    final isar = await db;
+    final employee = EmployeeCollection(id: isar.employeeCollections.autoIncrement(),
+    name: name,
+    );
+    // ..name = name
+    // ..id = Isar.autoIncrement;
+
+    return await isar.writeAsync((isar)  {
+        isar.employeeCollections.put(employee);
+        return employee.id;
+    });
+  }
+
 }
 
 @riverpod

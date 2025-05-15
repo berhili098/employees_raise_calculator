@@ -30,6 +30,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddEmployeeDialog(context),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
@@ -68,6 +72,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     'Error rate: ${employee.errorRate.toPercent()}',
                   ),
                   isThreeLine: true,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.add_task),
+                    tooltip: 'Add Work',
+                    onPressed: () => _showAddWorkDialog(context, employee),
+                  ),
                 ),
               );
             },
@@ -102,5 +111,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } finally {
       setState(() => _isLoading = false);
     }
+  }
+  
+  void _showAddEmployeeDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add New Employee'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(labelText: 'Employee Name'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (nameController.text.trim().isNotEmpty) {
+                await ref.read(employeeRepositoryProvider).createEmployee(nameController.text.trim());
+                ref.invalidate(rankedEmployeesProvider);
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showAddWorkDialog(BuildContext context, EmployeeCollection employee) {
+    final descriptionController = TextEditingController();
+    WorkStatus selectedStatus = WorkStatus.success;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text('Add Work for ${employee.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: 'Work Description'),
+                autofocus: true,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<WorkStatus>(
+                value: selectedStatus,
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: WorkStatus.values.map((status) => DropdownMenuItem(
+                  value: status,
+                  child: Text(status.toString().split('.').last),
+                )).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => selectedStatus = value);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (descriptionController.text.trim().isNotEmpty) {
+                  await ref.read(employeeRepositoryProvider).addWorkToEmployee(
+                    employee.id,
+                    descriptionController.text.trim(),
+                    selectedStatus,
+                  );
+                  ref.invalidate(rankedEmployeesProvider);
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
